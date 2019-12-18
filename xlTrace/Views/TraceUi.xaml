@@ -1,0 +1,61 @@
+﻿<Window
+  x:Class="xlTrace.Views.TraceUi"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+  xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+  xmlns:r="clr-namespace:Reactive.Bindings.Interactivity;assembly=ReactiveProperty.NET46"
+  xmlns:dz="http://schemas.devzest.com/presentation/docking"
+  xmlns:local="clr-namespace:xlTrace.Views"
+  xmlns:vm="clr-namespace:xlTrace.ViewModels"
+  xmlns:System="clr-namespace:System;assembly=mscorlib"
+  mc:Ignorable="d" 
+  d:DesignHeight="480"
+  d:DesignWidth="640" 
+  Title="{Binding CameraFpsAct.Value, StringFormat=xlTraceDna ( 0.00 Fps )}"
+  Opacity="{Binding WindowOpacity.Value}"
+  Background="Black"
+  AllowsTransparency="True"
+  WindowStyle="None"
+  Closing="Window_Closing"
+  ResizeMode="CanResizeWithGrip"
+  >
+  <Window.DataContext>
+    <vm:TraceUi />
+  </Window.DataContext>
+  <!--<WindowChrome.WindowChrome>
+    <WindowChrome CaptionHeight="{x:Static SystemParameters.CaptionHeight}"
+      ResizeBorderThickness="{x:Static SystemParameters.WindowResizeBorderThickness}" />
+  </WindowChrome.WindowChrome>
+  <Window.Resources>
+    <ResourceDictionary Source="WindowResource.xaml"/>
+  </Window.Resources>-->
+  <Grid>
+    <dz:DockControl WindowChrome.IsHitTestVisibleInChrome="True">
+      <dz:DockItem TabText="Option" Title="Option" 
+      ShowAction="{dz:ShowAsDockPositionAction DockPosition=Right}">
+        <StackPanel>
+          <WrapPanel>
+            <Button Content="TakeOneShot" Command="{Binding TakeOneShot}"/>
+          </WrapPanel>
+          <WrapPanel>
+            <TextBlock Text="Threshold " />
+            <TextBlock Text="{Binding Value, ElementName=ThresholdSlider, StringFormat=0}" />
+          </WrapPanel>
+          <Slider x:Name="ThresholdSlider" Minimum="0" Maximum="255" ValueChanged="ThresholdSlider_ValueChanged" Delay="333" />
+        </StackPanel>
+      </dz:DockItem>
+      <dz:DockItem TabText="Camera" Title="Camera"
+      ShowAction="{dz:ShowAsDockPositionAction DockPosition=Document}">
+        <Grid>
+          <Image Source="{Binding CapturedBmf.Value}" Panel.ZIndex="0" />
+          <Image Source="{Binding TracedBmf.Value}" Panel.ZIndex="1" Opacity="0.5" />
+        </Grid>
+      </dz:DockItem>
+    </dz:DockControl>
+    <Label Background="Blue" VerticalAlignment="Top" Height="24" MouseDown="Label_MouseDown" MouseUp="Label_MouseUp"/>
+    <!--<Border Background="Transparent" BorderBrush="Blue" BorderThickness="3" />-->
+    <Button Click="closeButton_Click" Background="Blue" FontStretch="Expanded" BorderBrush="Transparent" Content="X" HorizontalAlignment="Right" VerticalAlignment="Top" Width="34" Height="24"/>
+  </Grid>
+</Window>
