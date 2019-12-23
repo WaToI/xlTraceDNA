@@ -15,7 +15,7 @@
   d:DesignWidth="640" 
   Title="{Binding CameraFpsAct.Value, StringFormat=xlTraceDna ( 0.00 Fps )}"
   Opacity="{Binding WindowOpacity.Value}"
-  Background="Black"
+  Background="Transparent"
   AllowsTransparency="True"
   WindowStyle="None"
   Closing="Window_Closing"
@@ -24,17 +24,14 @@
   <Window.DataContext>
     <vm:TraceUi />
   </Window.DataContext>
-  <!--<WindowChrome.WindowChrome>
-    <WindowChrome CaptionHeight="{x:Static SystemParameters.CaptionHeight}"
-      ResizeBorderThickness="{x:Static SystemParameters.WindowResizeBorderThickness}" />
-  </WindowChrome.WindowChrome>
   <Window.Resources>
     <ResourceDictionary Source="WindowResource.xaml"/>
-  </Window.Resources>-->
+  </Window.Resources>
   <Grid>
-    <dz:DockControl WindowChrome.IsHitTestVisibleInChrome="True">
-      <dz:DockItem TabText="Option" Title="Option" 
-      ShowAction="{dz:ShowAsDockPositionAction DockPosition=Right}">
+    <Label Background="White" VerticalAlignment="Top" Height="23" Margin="0,24,0,0"/>
+    <dz:DockControl WindowChrome.IsHitTestVisibleInChrome="True" Margin="0,24,0,0" Background="Transparent">
+      <dz:DockItem TabText="Option" Title="Option"
+                   ShowAction="{dz:ShowAsDockPositionAction DockPosition=Right}">
         <StackPanel>
           <WrapPanel>
             <Button Content="TakeOneShot" Command="{Binding TakeOneShot}"/>
@@ -43,14 +40,22 @@
             <TextBlock Text="Threshold " />
             <TextBlock Text="{Binding Value, ElementName=ThresholdSlider, StringFormat=0}" />
           </WrapPanel>
+          <Viewbox>
+            <Image Source="{Binding TracedBmf.Value}" Panel.ZIndex="1" Opacity="0.5"/>
+          </Viewbox>
           <Slider x:Name="ThresholdSlider" Minimum="0" Maximum="255" ValueChanged="ThresholdSlider_ValueChanged" Delay="333" />
         </StackPanel>
       </dz:DockItem>
+      <dz:DockItem TabText="Screen" Title="Screen" Background="Transparent"
+                   ShowAction="{dz:ShowAsDockPositionAction DockPosition=Document}">
+        <StackPanel>
+        </StackPanel>
+      </dz:DockItem>
       <dz:DockItem TabText="Camera" Title="Camera"
-      ShowAction="{dz:ShowAsDockPositionAction DockPosition=Document}">
+                   ShowAction="{dz:ShowAsDockPositionAction DockPosition=Document}">
         <Grid>
-          <Image Source="{Binding CapturedBmf.Value}" Panel.ZIndex="0" />
-          <Image Source="{Binding TracedBmf.Value}" Panel.ZIndex="1" Opacity="0.5" />
+          <Image Source="{Binding CapturedBmf.Value}" Panel.ZIndex="0"/>
+          <Image Source="{Binding TracedBmf.Value}" Panel.ZIndex="1" Opacity="0.5"/>
         </Grid>
       </dz:DockItem>
     </dz:DockControl>
