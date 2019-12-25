@@ -1,6 +1,8 @@
 ﻿namespace xlTrace.ViewModels {
   using CsPotrace;
+  using DevZest.Windows.Docking;
   using ExcelDna.Integration;
+  using GraphicsProcessor;
   using Microsoft.Office.Core;
   using Reactive.Bindings;
   using System;
@@ -20,75 +22,154 @@
     public ReactiveProperty<CancelEventArgs> WindowClosing = new ReactiveProperty<CancelEventArgs>();
     public TraceUi() {
       WindowOpacity.Value = 0.6;
-      GetCameraNames();
-      setPoTrace();
-      StartCameraAsync();
+      GetCamNames();
+      initSubscribe();
+      //StartCameraAsync();
     }
     public void Dispose() {
-      StopCamera();
+      CamStop();
     }
-    public ReactiveProperty<double> CameraFps { get; set; } = new ReactiveProperty<double>(30d);
-    public ReactiveProperty<double> CameraFpsAct { get; set; } = new ReactiveProperty<double>();
+    public bool CamEn = false;
+    public DockControl DockControl;
+    public DockItem DockItem;
+    public string ActiveDocName = "";
+    public System.Windows.Point DocPoint;
+    public System.Windows.Size DocSize;
+    public void ActiveDocChanged(object sender, EventArgs e) {
+      //DockControl = (DockControl)sender;
+      //DockItem = DockControl.ActiveDocument;
+      ActiveDocName = DockItem.Name;
+      switch (ActiveDocName) {
+        case "Camera":
+          CamStartAsync();
+          ScrStop();
+          break;
+        case "Screen":
+          ScrStartAsync();
+          CamStop();
+          break;
+        default:
+          break;
+      }
+    }
+    public ReactiveProperty<double> ScrFps { get; set; } = new ReactiveProperty<double>(30d);
+    public ReactiveProperty<double> CamFps { get; set; } = new ReactiveProperty<double>(30d);
+    public ReactiveProperty<double> FpsAct { get; set; } = new ReactiveProperty<double>();
     DateTime lastTime;
-    System.Timers.Timer timer;
-    public ReactiveCollection<string> CameraNames { get; set; } = new ReactiveCollection<string>();
+    System.Timers.Timer scrTimer;
+    System.Timers.Timer camTimer;
+    public ReactiveCollection<string> CamNames { get; set; } = new ReactiveCollection<string>();
     SynchronizationContext sync;
-    public Task CaptureTask { get; set; }
-    public bool CaptureBusy { get; set; } = true;
-    public CancellationTokenSource CaptureCancelTokenSrc { get; set; }
-    public CancellationToken CaptureCancelToken { get; set; }
+    public Task ScrCaptureTask { get; set; }
+    public Task CamCaptureTask { get; set; }
+    public bool ScrCaptureBusy { get; set; } = true;
+    public bool CamCaptureBusy { get; set; } = true;
+    public CancellationTokenSource ScrCaptureCancelTokenSrc { get; set; }
+    public CancellationToken ScrCaptureCancelToken { get; set; }
+    public CancellationTokenSource CamCaptureCancelTokenSrc { get; set; }
+    public CancellationToken CamCaptureCancelToken { get; set; }
     UsbCamera cam;
     public Bitmap CapturedBmp { get; set; }
     public ReactiveProperty<BitmapFrame> CapturedBmf { get; set; } = new ReactiveProperty<BitmapFrame>();
-    public void GetCameraNames() {
+    public void GetCamNames() {
       foreach (var dev in UsbCamera.FindDevices()) {
-        CameraNames.Add(dev);
+        CamNames.Add(dev);
       }
     }
-    public void StartCameraAsync() {
+    public void ScrStartAsync() {
       sync = SynchronizationContext.Current;
-      CaptureTask = CaptureAsync();
+      ScrCaptureTask = ScrCaptureAsync();
+      CamEn = false;
     }
-    public void StopCamera() {
-      timer.Dispose();
-      cam.Release();
-      cam = null;
+    public void CamStartAsync() {
+      sync = SynchronizationContext.Current;
+      CamCaptureTask = CamCaptureAsync();
+      CamEn = true;
     }
-    public Task CaptureAsync() {
-      CaptureCancelTokenSrc = new CancellationTokenSource();
-      CaptureCancelToken = CaptureCancelTokenSrc.Token;
-      var camNo = 0;// UsbCamera.FindDevices().Length - 1;
+    public void ScrStop() {
+      try {
+        if (scrTimer != null) {
+          scrTimer.Dispose();
+        }
+      } catch (Exception) { }
+    }
+    public void CamStop() {
+      try {
+        CamEn = false;
+        if (camTimer != null) {
+          camTimer.Dispose();
+        }
+        if (cam != null) {
+          cam.Release();
+          cam = null;
+        }
+      } catch (Exception) { }
+    }
+    public Task ScrCaptureAsync() {
+      ScrCaptureCancelTokenSrc = new CancellationTokenSource();
+      ScrCaptureCancelToken = ScrCaptureCancelTokenSrc.Token;
+      return Task.Run(() => {
+        scrTimer = new System.Timers.Timer(1000d / ScrFps.Value);
+        scrTimer.Elapsed += scrCaptureTimerElapsed;
+        ScrCaptureBusy = false;
+        scrTimer.Start();
+      }, ScrCaptureCancelToken);
+    }
+    public Task CamCaptureAsync() {
+      CamCaptureCancelTokenSrc = new CancellationTokenSource();
+      CamCaptureCancelToken = CamCaptureCancelTokenSrc.Token;
+      var camNo = UsbCamera.FindDevices().Length - 1;
       return Task.Run(() => {
         //cam = new UsbCamera(camNo, 320, 180);
         cam = new UsbCamera(camNo, 640, 360);
         //cam = new UsbCamera(camNo, 1280, 720);
         cam.Start();
-        timer = new System.Timers.Timer(1000d / CameraFps.Value);
-        timer.Elapsed += captureTimerElapsed;
-        CaptureBusy = false;
-        timer.Start();
-      }, CaptureCancelToken);
+        camTimer = new System.Timers.Timer(1000d / CamFps.Value);
+        camTimer.Elapsed += camCaptureTimerElapsed;
+        CamCaptureBusy = false;
+        camTimer.Start();
+      }, CamCaptureCancelToken);
     }
     /// <summary>
-    /// キャプチャーメイン処理
+    /// Scrキャプチャーメイン処理
     /// </summary>
-    void captureTimerElapsed(object sender, System.Timers.ElapsedEventArgs e) {
-      if (!CaptureBusy) {
+    void scrCaptureTimerElapsed(object sender, System.Timers.ElapsedEventArgs e) {
+      if (!ScrCaptureBusy) {
         try {
-          CaptureBusy = true;
-          CameraFpsAct.Value = 1000d / (DateTime.Now - lastTime).Milliseconds;
+          ScrCaptureBusy = true;
+          FpsAct.Value = 1000d / (DateTime.Now - lastTime).Milliseconds;
           lastTime = DateTime.Now;
-          CapturedBmp = NewFrame(cam);
+          CapturedBmp = ScreenCapture.Instance.CaptureScreen((int)DocPoint.X, (int)DocPoint.Y, (int)DocSize.Width, (int)DocSize.Height);
+          CapturedBmp.Save(@"C:\Users\tg30266\Desktop\test.png");
           Potrace.Trace(CapturedBmp, (int)TraceThreshold, TracePitch);
           tracedSvgStr = traceSvgStr;
           tracedFaces = Potrace.TraceFaces(traceSvgStr);
           CapturedBmf.Value = CapturedBmp.ToBitmapFrame();
-          TracedBmf.Value = tracedBmp.ToBitmapFrame();
-          CaptureBusy = false;
+          TracedBmf.Value = TracedBmp.ToBitmapFrame();
+          ScrCaptureBusy = false;
+        } catch (Exception) { ScrCaptureBusy = false; }
+      }
+    }
+    /// <summary>
+    /// Camキャプチャーメイン処理
+    /// </summary>
+    void camCaptureTimerElapsed(object sender, System.Timers.ElapsedEventArgs e) {
+      if (!CamCaptureBusy) {
+        try {
+          CamCaptureBusy = true;
+          FpsAct.Value = 1000d / (DateTime.Now - lastTime).Milliseconds;
+          lastTime = DateTime.Now;
+          CapturedBmp = CamNewFrame(cam);
+          Potrace.Trace(CapturedBmp, (int)TraceThreshold, TracePitch);
+          tracedSvgStr = traceSvgStr;
+          tracedFaces = Potrace.TraceFaces(traceSvgStr);
+          CapturedBmf.Value = CapturedBmp.ToBitmapFrame();
+          TracedBmf.Value = TracedBmp.ToBitmapFrame();
+          CamCaptureBusy = false;
         } catch (Exception) { }
       }
     }
-    Func<UsbCamera, Bitmap> NewFrame = (c) => {
+    Func<UsbCamera, Bitmap> CamNewFrame = (c) => {
       return c.GetBitmap();
     };
     public double TraceThreshold = 100d;
@@ -99,8 +180,7 @@
     public void TraceThresholdChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
       TraceThreshold = e.NewValue;
     }
-    void setPoTrace() {
-
+    void initSubscribe() {
       TakeOneShot.Subscribe((_) => takeOneShot());
     }
     string traceSvgStr {
@@ -108,7 +188,7 @@
         return Potrace.TraceSvg(CapturedBmp, (int)TraceThreshold, TracePitch);
       }
     }
-    Bitmap tracedBmp {
+    Bitmap TracedBmp {
       get {
         return Potrace.TraceBmp(CapturedBmp, (int)TraceThreshold, TracePitch);
       }
@@ -116,10 +196,10 @@
     public ReactiveProperty<BitmapFrame> TracedBmf { get; set; } = new ReactiveProperty<BitmapFrame>();
     void takeOneShot() {
 #if DEBUG
-      //      var bmppath = $@"{Environment.GetFolderPath(Environment.SpecialFolder.Desktop)}\trace_{DateTime.Now.ToString("yymmddhhMMss")}.bmp";
-      //      CapturedBmp.Save(bmppath);
-      var svgpath = $@"{Environment.GetFolderPath(Environment.SpecialFolder.Desktop)}\trace_{DateTime.Now.ToString("yymmddhhMMss")}.svg";
-      System.IO.File.WriteAllText(new System.IO.FileInfo(svgpath).FullName, tracedSvgStr);
+      //var bmppath = $@"{Environment.GetFolderPath(Environment.SpecialFolder.Desktop)}\trace_{DateTime.Now.ToString("yymmddhhMMss")}.bmp";
+      //CapturedBmp.Save(bmppath);
+      //var svgpath = $@"{Environment.GetFolderPath(Environment.SpecialFolder.Desktop)}\trace_{DateTime.Now.ToString("yymmddhhMMss")}.svg";
+      //System.IO.File.WriteAllText(new System.IO.FileInfo(svgpath).FullName, tracedSvgStr);
 #endif
       var xl = (XL.Application)ExcelDnaUtil.Application;
       var awb = (XL.Workbook)xl.ActiveWorkbook;

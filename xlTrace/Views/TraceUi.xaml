@@ -13,7 +13,7 @@
   mc:Ignorable="d" 
   d:DesignHeight="480"
   d:DesignWidth="640" 
-  Title="{Binding CameraFpsAct.Value, StringFormat=xlTraceDna ( 0.00 Fps )}"
+  Title="{Binding CamFpsAct.Value, StringFormat=xlTraceDna ( 0.00 Fps )}"
   Opacity="{Binding WindowOpacity.Value}"
   Background="Transparent"
   AllowsTransparency="True"
@@ -29,37 +29,35 @@
   </Window.Resources>
   <Grid>
     <Label Background="White" VerticalAlignment="Top" Height="23" Margin="0,24,0,0"/>
-    <dz:DockControl WindowChrome.IsHitTestVisibleInChrome="True" Margin="0,24,0,0" Background="Transparent">
+    <dz:DockControl WindowChrome.IsHitTestVisibleInChrome="True" Margin="0,24,0,0" Background="Transparent" ActiveDocumentChanged="DockControl_ActiveDocumentChanged">
       <dz:DockItem TabText="Option" Title="Option"
                    ShowAction="{dz:ShowAsDockPositionAction DockPosition=Right}">
         <StackPanel>
-          <WrapPanel>
-            <Button Content="TakeOneShot" Command="{Binding TakeOneShot}"/>
-          </WrapPanel>
+          <Viewbox>
+            <Image Source="{Binding TracedBmf.Value}" Panel.ZIndex="1" Opacity="0.5"/>
+          </Viewbox>
           <WrapPanel>
             <TextBlock Text="Threshold " />
             <TextBlock Text="{Binding Value, ElementName=ThresholdSlider, StringFormat=0}" />
           </WrapPanel>
-          <Viewbox>
-            <Image Source="{Binding TracedBmf.Value}" Panel.ZIndex="1" Opacity="0.5"/>
-          </Viewbox>
           <Slider x:Name="ThresholdSlider" Minimum="0" Maximum="255" ValueChanged="ThresholdSlider_ValueChanged" Delay="333" />
+            <Button Content="TakeOneShot" Command="{Binding TakeOneShot}"/>
         </StackPanel>
       </dz:DockItem>
-      <dz:DockItem TabText="Screen" Title="Screen" Background="Transparent"
+      <dz:DockItem x:Name="Screen" TabText="Screen" Title="Screen" Background="Transparent"
                    ShowAction="{dz:ShowAsDockPositionAction DockPosition=Document}">
         <StackPanel>
         </StackPanel>
       </dz:DockItem>
-      <dz:DockItem TabText="Camera" Title="Camera"
+      <dz:DockItem x:Name="Camera" TabText="Camera" Title="Camera"
                    ShowAction="{dz:ShowAsDockPositionAction DockPosition=Document}">
         <Grid>
-          <Image Source="{Binding CapturedBmf.Value}" Panel.ZIndex="0"/>
+          <Image Source="{Binding CamCapturedBmf.Value}" Panel.ZIndex="0"/>
           <Image Source="{Binding TracedBmf.Value}" Panel.ZIndex="1" Opacity="0.5"/>
         </Grid>
       </dz:DockItem>
     </dz:DockControl>
-    <Label Background="Blue" VerticalAlignment="Top" Height="24" MouseDown="Label_MouseDown" MouseUp="Label_MouseUp"/>
+    <Label Foreground="White" Background="Blue" VerticalAlignment="Top" Height="24" MouseDown="Label_MouseDown" MouseUp="Label_MouseUp" Content="{Binding CamFpsAct.Value}" ContentStringFormat="xlTraceDna ( 0.00 Fps )"/>
     <!--<Border Background="Transparent" BorderBrush="Blue" BorderThickness="3" />-->
     <Button Click="closeButton_Click" Background="Blue" FontStretch="Expanded" BorderBrush="Transparent" Content="X" HorizontalAlignment="Right" VerticalAlignment="Top" Width="34" Height="24"/>
   </Grid>
